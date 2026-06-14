@@ -136,6 +136,17 @@ MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
 
 These values only render top-bar links. They do not affect memory data.
 
+When MemoryHub is mounted behind an existing admin app, let that app own login
+and permissions. The admin app can inject `Authorization: Bearer ...` on the
+server side and request the web page with:
+
+```text
+X-MemoryHub-Trusted-Proxy: 1
+```
+
+In that mode, browsers do not see the bearer token input, and MemoryHub can bind
+only to `127.0.0.1`.
+
 ## Node Client
 
 ```bash

@@ -24,6 +24,14 @@ MEMORYHUB_MY_APP_2_URL=http://127.0.0.1:3000/admin/agent-memory
 MEMORYHUB_CLOUD_DISK_URL=http://127.0.0.1:3000/disk
 ```
 
+For admin-proxy deployments, the proxy should authenticate the user, inject the
+MemoryHub bearer token server-side, and pass this header when fetching the web
+page:
+
+```http
+X-MemoryHub-Trusted-Proxy: 1
+```
+
 ## ls
 
 ```http

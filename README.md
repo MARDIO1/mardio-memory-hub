@@ -140,6 +140,14 @@ MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
 
 这些值只决定页面顶部的跳转按钮，不影响记忆数据。
 
+如果把 MemoryHub 挂在已有后台系统后面，推荐让后台系统负责登录态和权限判断，再由后台代理请求 MemoryHub API。代理可以在服务端注入 `Authorization: Bearer ...`，并在请求 Web 页面时加：
+
+```text
+X-MemoryHub-Trusted-Proxy: 1
+```
+
+这样浏览器里不会出现 bearer token 输入框，MemoryHub 也可以只监听 `127.0.0.1`。
+
 ## Node 客户端
 
 ```bash
