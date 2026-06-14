@@ -6,12 +6,21 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from .core import HubPaths, delete_document, get_paths, init_hub, read_document, search, upsert_document
+from .web import render_index
 
 
 def json_response(handler: BaseHTTPRequestHandler, status: int, payload: object) -> None:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json; charset=utf-8")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+def html_response(handler: BaseHTTPRequestHandler, status: int, body: bytes) -> None:
+    handler.send_response(status)
+    handler.send_header("Content-Type", "text/html; charset=utf-8")
     handler.send_header("Content-Length", str(len(body)))
     handler.end_headers()
     handler.wfile.write(body)
@@ -42,10 +51,13 @@ def make_handler(paths: HubPaths, token: str | None):
             return False
 
         def do_GET(self) -> None:
-            if not self.require_auth():
-                return
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
+            if parsed.path in {"/", "/app"}:
+                html_response(self, 200, render_index(token_required=bool(token)))
+                return
+            if not self.require_auth():
+                return
             try:
                 if parsed.path == "/health":
                     json_response(self, 200, {"ok": True})

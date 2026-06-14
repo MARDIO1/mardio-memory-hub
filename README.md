@@ -33,6 +33,7 @@ memoryhub delete <path>
 
 - Python CLI；
 - 同样四个动作的 HTTP API；
+- 一个内置 Web 前端；
 - Node HTTP 客户端；
 - AstrBot 插件模板；
 - 一套 Markdown 目录约定。
@@ -116,6 +117,28 @@ DELETE /api/delete
 ```
 
 如果设置了 `MEMORYHUB_API_TOKEN`，HTTP 请求需要带 bearer token。
+
+## Web 前端
+
+同一个服务也会提供一个 Web 页面：
+
+```text
+GET /
+GET /app
+```
+
+这个页面可以搜索、读取、写入和归档记忆。若服务端设置了 `MEMORYHUB_API_TOKEN`，页面会显示 token 输入框；token 只保存在当前浏览器的 localStorage。
+
+可以用环境变量把它和已有应用连起来：
+
+```env
+MEMORYHUB_MY_APP_2_URL=http://127.0.0.1:3000/admin/agent-memory
+MEMORYHUB_MY_APP_2_LABEL=Open my-app-2
+MEMORYHUB_CLOUD_DISK_URL=http://127.0.0.1:3000/disk
+MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
+```
+
+这些值只决定页面顶部的跳转按钮，不影响记忆数据。
 
 ## Node 客户端
 

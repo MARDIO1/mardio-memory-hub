@@ -34,6 +34,7 @@ The project contains:
 
 - a Python CLI;
 - a small HTTP API with the same four operations;
+- a built-in web frontend;
 - a Node HTTP client;
 - an AstrBot integration template;
 - a simple Markdown directory convention.
@@ -110,6 +111,30 @@ DELETE /api/delete
 ```
 
 Set `MEMORYHUB_API_TOKEN` if the HTTP API should require bearer auth.
+
+## Web Frontend
+
+The same server also serves a web page:
+
+```text
+GET /
+GET /app
+```
+
+The page can search, read, write, and archive memory files. If
+`MEMORYHUB_API_TOKEN` is set, the page shows a token input; the token is saved
+only in the current browser's localStorage.
+
+Use environment variables to connect it to an existing app:
+
+```env
+MEMORYHUB_MY_APP_2_URL=http://127.0.0.1:3000/admin/agent-memory
+MEMORYHUB_MY_APP_2_LABEL=Open my-app-2
+MEMORYHUB_CLOUD_DISK_URL=http://127.0.0.1:3000/disk
+MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
+```
+
+These values only render top-bar links. They do not affect memory data.
 
 ## Node Client
 

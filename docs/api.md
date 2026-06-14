@@ -8,6 +8,22 @@ Authorization: Bearer <token>
 
 The API mirrors the CLI's four operations.
 
+## Web UI
+
+The HTTP server also serves the built-in web frontend:
+
+```http
+GET /
+GET /app
+```
+
+Configure top-bar links with:
+
+```env
+MEMORYHUB_MY_APP_2_URL=http://127.0.0.1:3000/admin/agent-memory
+MEMORYHUB_CLOUD_DISK_URL=http://127.0.0.1:3000/disk
+```
+
 ## ls
 
 ```http
