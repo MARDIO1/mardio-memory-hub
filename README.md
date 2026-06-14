@@ -98,6 +98,18 @@ node node/memoryhub-node.mjs delete 2-projects/example/current.md
 
 ## Use From Another Repository
 
+For `my-app-2`, use this repository as the upstream source and pin it as a child dependency.
+The recommended layout is a git submodule:
+
+```bash
+git submodule add https://github.com/<owner>/mardio-memory-hub.git vendor/mardio-memory-hub
+git commit -m "chore: add memory hub submodule"
+```
+
+Run MemoryHub as a side service and let `my-app-2` call the four HTTP endpoints with
+`MEMORYHUB_BASE_URL` and `MEMORYHUB_API_TOKEN`. Keep app-specific tokens, domains, and
+data directories in `.env`.
+
 Recommended options:
 
 ```bash
@@ -111,3 +123,5 @@ git subtree add --prefix vendor/mardio-memory-hub https://github.com/<owner>/mar
 ```
 
 Applications can run the HTTP API as a side service, or call the Python CLI directly with `MEMORYHUB_DATA_DIR` pointing to their local memory directory.
+
+See `docs/sync-my-app-2.md` for the recommended parent/child git workflow.
