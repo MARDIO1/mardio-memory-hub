@@ -54,7 +54,8 @@ def make_handler(paths: HubPaths, token: str | None):
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             if parsed.path in {"/", "/app"}:
-                html_response(self, 200, render_index(token_required=bool(token)))
+                trusted_proxy = self.headers.get("x-memoryhub-trusted-proxy") == "1"
+                html_response(self, 200, render_index(token_required=bool(token) and not trusted_proxy))
                 return
             if not self.require_auth():
                 return
