@@ -1,5 +1,8 @@
 # mardio-memory-hub
 
+<a href="README.md"><kbd>English</kbd></a>
+<a href="README.zh-CN.md"><kbd>简体中文</kbd></a>
+
 Markdown-first memory hub for agents.
 
 The repository is intentionally small: files are the memory, SQLite is only a local searchable index, and agents operate through four verbs:
