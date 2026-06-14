@@ -320,6 +320,9 @@ INDEX_HTML = """<!doctype html>
   <script>
     const config = JSON.parse(document.getElementById('memoryhub-config').textContent);
     const state = { token: localStorage.getItem('memoryhubToken') || '' };
+    const basePath = location.pathname === '/memoryhub' || location.pathname.startsWith('/memoryhub/')
+      ? '/memoryhub'
+      : '';
 
     const els = {
       appLinks: document.getElementById('appLinks'),
@@ -403,7 +406,7 @@ INDEX_HTML = """<!doctype html>
     async function search() {
       const q = encodeURIComponent(els.queryInput.value.trim());
       showMessage('搜索中...');
-      const payload = await request(`/api/ls?q=${q}`, { headers: { 'Content-Type': 'application/json' } });
+      const payload = await request(`${basePath}/api/ls?q=${q}`, { headers: { 'Content-Type': 'application/json' } });
       renderResults(payload.results || []);
       showMessage(`找到 ${(payload.results || []).length} 条。`);
     }
@@ -412,7 +415,7 @@ INDEX_HTML = """<!doctype html>
       const path = els.pathInput.value.trim();
       if (!path) return showMessage('先输入 path。');
       showMessage('读取中...');
-      const payload = await request(`/api/read?path=${encodeURIComponent(path)}`);
+      const payload = await request(`${basePath}/api/read?path=${encodeURIComponent(path)}`);
       els.contentInput.value = payload.content || '';
       els.selectedMeta.textContent = payload.document ? `${payload.document.status} / ${payload.document.updated_at}` : path;
       showMessage(`已读取 ${path}`);
@@ -422,7 +425,7 @@ INDEX_HTML = """<!doctype html>
       const path = els.pathInput.value.trim();
       if (!path) return showMessage('先输入 path。');
       showMessage('写入中...');
-      const payload = await request('/api/write', {
+      const payload = await request(`${basePath}/api/write`, {
         method: 'POST',
         body: JSON.stringify({ path, content: els.contentInput.value }),
       });
@@ -436,7 +439,7 @@ INDEX_HTML = """<!doctype html>
       if (!path) return showMessage('先输入 path。');
       if (!confirm(`归档 ${path}？`)) return;
       showMessage('归档中...');
-      await request('/api/delete', {
+      await request(`${basePath}/api/delete`, {
         method: 'DELETE',
         body: JSON.stringify({ path }),
       });
