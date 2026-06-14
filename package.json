@@ -1,0 +1,15 @@
+{
+  "name": "mardio-memory-hub-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "memoryhub-node": "./node/memoryhub-node.mjs"
+  },
+  "scripts": {
+    "smoke:node": "node ./node/memoryhub-node.mjs ls"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

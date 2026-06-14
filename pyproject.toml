@@ -1,0 +1,14 @@
+[project]
+name = "mardio-memory-hub"
+version = "0.1.0"
+description = "Markdown-first memory hub with SQLite index, CLI, and HTTP API for agents."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+memoryhub = "memoryhub.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

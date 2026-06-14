@@ -1,0 +1,5 @@
+name: agent_memory_hub
+desc: Connect AstrBot to a generic MemoryHub API.
+version: 0.1.0
+author: Mardio
+repo: local
