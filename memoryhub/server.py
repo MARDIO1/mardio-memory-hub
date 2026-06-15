@@ -5,7 +5,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from .core import HubPaths, delete_document, get_paths, init_hub, read_document, search, upsert_document
+from .core import HubPaths, delete_document, get_paths, init_hub, list_documents, read_document, search, upsert_document
 from .web import render_index
 
 
@@ -64,7 +64,8 @@ def make_handler(paths: HubPaths, token: str | None):
                     json_response(self, 200, {"ok": True})
                 elif parsed.path in {"/api/ls", "/api/search"}:
                     q = query.get("q", [""])[0]
-                    json_response(self, 200, {"results": search(paths, q, limit=50)})
+                    results = search(paths, q, limit=50) if q.strip() else list_documents(paths)
+                    json_response(self, 200, {"results": results})
                 elif parsed.path in {"/api/read", "/api/file"}:
                     rel_path = query.get("path", [""])[0]
                     json_response(self, 200, read_document(paths, rel_path))

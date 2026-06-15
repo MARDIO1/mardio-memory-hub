@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 
-from .core import delete_document, get_paths, init_hub, read_document, search, upsert_document
+from .core import delete_document, get_paths, init_hub, list_documents, read_document, search, upsert_document
 
 
 def print_json(data: object) -> None:
@@ -51,13 +51,13 @@ def main(argv: list[str] | None = None) -> None:
     init_hub(paths)
 
     if args.command == "ls":
-        rows = search(paths, args.query, limit=50)
+        rows = search(paths, args.query, limit=50) if args.query else list_documents(paths)
         if args.json:
             print_json(rows)
             return
         for item in rows:
             print(f"[{item['status']}] {item['path']} :: {item['title']}")
-            if item.get("snippet"):
+            if args.query and item.get("snippet"):
                 print(f"  {item['snippet']}")
     elif args.command == "read":
         result = read_document(paths, args.path)

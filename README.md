@@ -18,13 +18,13 @@
 MemoryHub 的核心约定很小：
 
 ```bash
-memoryhub ls [keyword]
+memoryhub ls [keyword]          # 不带关键词时只列 SQLite 索引
 memoryhub read <path>
 memoryhub write <path> <content>
 memoryhub delete <path>
 ```
 
-正文是 Markdown 或 jsonl 文件，SQLite 只做索引。人可以像管理文件夹一样看和改，Agent 可以用固定的四个动作读写。
+正文是 Markdown 或 jsonl 文件，SQLite 负责列索引和过滤。人可以像管理文件夹一样看和改，Agent 先用 `ls` 看索引，再按需 `read` 精读正文，避免一上来吞完整文件。
 
 ---
 
@@ -131,6 +131,7 @@ MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
 Python CLI：
 
 ```bash
+uv run memoryhub ls
 uv run memoryhub ls audit
 uv run memoryhub read 2-projects/example/current.md
 uv run memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
@@ -140,6 +141,7 @@ uv run memoryhub delete 2-projects/example/current.md
 不用 uv：
 
 ```bash
+python3 -m memoryhub.cli ls
 python3 -m memoryhub.cli ls audit
 python3 -m memoryhub.cli read 2-projects/example/current.md
 ```
@@ -150,6 +152,7 @@ Node CLI：
 export MEMORYHUB_BASE_URL=http://127.0.0.1:8765
 export MEMORYHUB_API_TOKEN=replace-me
 
+node node/memoryhub-node.mjs ls
 node node/memoryhub-node.mjs ls audit
 node node/memoryhub-node.mjs read 2-projects/example/current.md
 node node/memoryhub-node.mjs write 2-projects/example/current.md "# Current\n\nRemember this."
@@ -158,8 +161,9 @@ node node/memoryhub-node.mjs delete 2-projects/example/current.md
 
 Agent 的推荐工作流：
 
-1. 开始任务前 `ls` 搜索相关项目、规则、工具。
-2. 需要完整上下文时 `read` 读取具体文件。
+1. 开始任务前先跑一次无关键词 `ls`，看 SQLite 索引里的最新文件。
+2. 如果索引太多，再用 `ls 关键词` 过滤。
+3. 需要完整上下文时 `read` 读取具体文件。
 3. 产出新的长期规则、项目上下文、排查记录时 `write`。
 4. 短期记忆不用了就 `delete` 归档。
 
@@ -180,6 +184,7 @@ integrations/astrbot/config.example.json
 聊天里可以手动调用：
 
 ```text
+/mem_ls
 /mem_ls keyword
 /mem_read 2-projects/example/current.md
 /mem_write 2-projects/example/current.md | # Current
@@ -197,7 +202,7 @@ agent_memory_write
 agent_memory_delete
 ```
 
-也就是说，人在聊天里可以直接发 `/mem_*` 命令；如果模型工具调用正常，AstrBot 里的 AI 也可以自己调用 `agent_memory_*` 工具读写公共记忆。
+也就是说，人在聊天里发具体命令：`/mem_ls`、`/mem_read`、`/mem_write`、`/mem_delete`。如果模型工具调用正常，AstrBot 里的 AI 也可以调用对应的 `agent_memory_ls/read/write/delete` 工具。
 
 ## AGENTS/Skill 描述
 

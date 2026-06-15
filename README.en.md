@@ -18,13 +18,13 @@ This repository contains only two kinds of things:
 The core surface is intentionally small:
 
 ```bash
-memoryhub ls [keyword]
+memoryhub ls [keyword]          # without keywords, list SQLite index only
 memoryhub read <path>
 memoryhub write <path> <content>
 memoryhub delete <path>
 ```
 
-Markdown or jsonl files are the source of truth. SQLite is only an index. Humans can inspect and edit files directly, while agents use the same four operations everywhere.
+Markdown or jsonl files are the source of truth. SQLite powers index listing and filtering. Agents should run `ls` first, then `read` only the documents that matter.
 
 ---
 
@@ -131,6 +131,7 @@ MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
 Python CLI:
 
 ```bash
+uv run memoryhub ls
 uv run memoryhub ls audit
 uv run memoryhub read 2-projects/example/current.md
 uv run memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
@@ -140,6 +141,7 @@ uv run memoryhub delete 2-projects/example/current.md
 Without uv:
 
 ```bash
+python3 -m memoryhub.cli ls
 python3 -m memoryhub.cli ls audit
 python3 -m memoryhub.cli read 2-projects/example/current.md
 ```
@@ -150,6 +152,7 @@ Node CLI:
 export MEMORYHUB_BASE_URL=http://127.0.0.1:8765
 export MEMORYHUB_API_TOKEN=replace-me
 
+node node/memoryhub-node.mjs ls
 node node/memoryhub-node.mjs ls audit
 node node/memoryhub-node.mjs read 2-projects/example/current.md
 node node/memoryhub-node.mjs write 2-projects/example/current.md "# Current\n\nRemember this."
@@ -158,8 +161,9 @@ node node/memoryhub-node.mjs delete 2-projects/example/current.md
 
 Recommended agent flow:
 
-1. Run `ls` before work to find relevant rules, projects, and tools.
-2. Run `read` when full context is needed.
+1. Run plain `ls` before work to inspect the latest SQLite index.
+2. Run `ls keyword` if the index is too large.
+3. Run `read` only when full context is needed.
 3. Run `write` for durable rules, project context, and debugging records.
 4. Run `delete` to archive short-lived memory that is no longer useful.
 
@@ -180,6 +184,7 @@ integrations/astrbot/config.example.json
 Manual chat commands:
 
 ```text
+/mem_ls
 /mem_ls keyword
 /mem_read 2-projects/example/current.md
 /mem_write 2-projects/example/current.md | # Current
@@ -197,7 +202,7 @@ agent_memory_write
 agent_memory_delete
 ```
 
-Humans can send `/mem_*` commands in chat. If tool calling works, the AstrBot LLM can call `agent_memory_*` tools directly.
+Humans should send the concrete commands: `/mem_ls`, `/mem_read`, `/mem_write`, and `/mem_delete`. If tool calling works, the AstrBot LLM can call matching `agent_memory_ls/read/write/delete` tools directly.
 
 ## AGENTS/Skill Notes
 
