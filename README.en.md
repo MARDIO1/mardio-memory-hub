@@ -3,12 +3,19 @@
 <a href="README.md"><kbd>简体中文</kbd></a>
 <a href="README.en.md"><kbd>English</kbd></a>
 
-I built this because agents need a shared memory that is easy to inspect, edit,
-move, and delete. A database-only memory is hard to review. Random notes in a
-folder are hard to search consistently. MemoryHub sits in the middle: Markdown
-files are the source of truth, and SQLite is only a rebuildable index.
+I built this for my own agent workflow, and it has been useful.
 
-The useful surface is deliberately small:
+MemoryHub is a lightweight cross-device and agent-to-agent memory layer. It is meant for two practical cases:
+
+1. Different agents, devices, or users need to cooperate, but you do not want to fully open every permission boundary. MemoryHub can carry context, audit notes, network debugging records, candidate memory, and work state.
+2. A new device or agent environment needs a personal skill hub, rule hub, and project context hub. The agent reads the rules and current project context before working.
+
+This repository contains only two kinds of things:
+
+1. **MemoryHub server**: Python HTTP API, SQLite index, Markdown file storage, and built-in web frontend.
+2. **Agent clients**: Python CLI, Node CLI, AstrBot plugin template, and AGENTS/skill-style usage notes.
+
+The core surface is intentionally small:
 
 ```bash
 memoryhub ls [keyword]
@@ -17,115 +24,100 @@ memoryhub write <path> <content>
 memoryhub delete <path>
 ```
 
+Markdown or jsonl files are the source of truth. SQLite is only an index. Humans can inspect and edit files directly, while agents use the same four operations everywhere.
+
 ---
 
-## What It Is
-
-MemoryHub is a small shared-memory layer for AI agents.
-
-It gives agents one common place to store:
-
-- rules that should be read before work starts;
-- project notes and current context;
-- temporary task memory;
-- reusable tool, skill, MCP, and integration notes.
-
-The project contains:
-
-- a Python CLI;
-- a small HTTP API with the same four operations;
-- a built-in web frontend;
-- a Node HTTP client;
-- an AstrBot integration template;
-- a simple Markdown directory convention.
-
-## Directory Convention
+## Layout
 
 ```text
-0-memoryhub-rules/     rules for using MemoryHub
+0-memoryhub-rules/     rules for using MemoryHub itself
 1-work-rules/          general work rules
-2-projects/            project notes, grouped by project folders
-3-tools/               skills, MCP notes, CLIs, integrations
+2-projects/            project memory, grouped by project folders
+3-tools/               skills, MCP notes, CLIs, plugins, tool docs
+memoryhub/             server and Python CLI
+node/                  Node CLI
+integrations/astrbot/  AstrBot plugin template
+docs/                  API and integration notes
 ```
-
-## Status
 
 Status is stored in Markdown frontmatter:
 
 ```md
 ---
 status: using
-tags: [example]
+tags: [network, audit]
 ---
 
-# Current task
+# Current context
 ```
 
-Allowed values:
+Allowed statuses:
 
 ```text
 active    long-term memory
-using     current or temporary memory
-archived  kept on disk, hidden from default ls
+using     currently used memory, usually task context
+archived  archived and hidden from default search
 ```
 
-`delete` is a soft delete. It marks the file as `archived`.
+`delete` is a soft delete. It marks the file as `archived` instead of removing it from disk.
 
-## Install
+## Server
 
-With uv:
+Start the server:
 
 ```bash
-uv run memoryhub ls
+uv run python -m memoryhub.server
 ```
 
 Without uv:
 
 ```bash
-python3 -m memoryhub.cli ls
-```
-
-Use `MEMORYHUB_DATA_DIR` to point MemoryHub at the directory that stores memory
-files and the local SQLite index.
-
-## CLI
-
-```bash
-memoryhub ls project
-memoryhub read 2-projects/example/current.md
-memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
-memoryhub delete 2-projects/example/current.md
-```
-
-## HTTP API
-
-```bash
 python3 -m memoryhub.server
 ```
+
+Common environment variables:
+
+```env
+MEMORYHUB_DATA_DIR=/path/to/memoryhub-data
+MEMORYHUB_DB_PATH=/path/to/memoryhub.sqlite
+MEMORYHUB_API_HOST=127.0.0.1
+MEMORYHUB_API_PORT=8765
+MEMORYHUB_API_TOKEN=replace-me
+```
+
+API:
 
 ```text
 GET    /api/ls?q=keyword
 GET    /api/read?path=...
 POST   /api/write
 DELETE /api/delete
+GET    /health
 ```
 
-Set `MEMORYHUB_API_TOKEN` if the HTTP API should require bearer auth.
+If `MEMORYHUB_API_TOKEN` is set, HTTP clients must send:
 
-## Web Frontend
+```text
+Authorization: Bearer <token>
+```
 
-The same server also serves a web page:
+The same server provides the web frontend:
 
 ```text
 GET /
 GET /app
 ```
 
-The page can search, read, write, and archive memory files. If
-`MEMORYHUB_API_TOKEN` is set, the page shows a token input; the token is saved
-only in the current browser's localStorage.
+When mounting MemoryHub behind an existing admin app, let that app own login and permissions, then proxy MemoryHub server-side. Add this header when proxying the web page:
 
-Use environment variables to connect it to an existing app:
+```text
+X-MemoryHub-Trusted-Proxy: 1
+```
+
+In that mode, the browser does not see a bearer-token input, and MemoryHub can bind only to `127.0.0.1`.
+
+Optional top-bar links:
 
 ```env
 MEMORYHUB_MY_APP_2_URL=http://127.0.0.1:3000/admin/agent-memory
@@ -134,46 +126,69 @@ MEMORYHUB_CLOUD_DISK_URL=http://127.0.0.1:3000/disk
 MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
 ```
 
-These values only render top-bar links. They do not affect memory data.
+## Agent Clients
 
-When MemoryHub is mounted behind an existing admin app, let that app own login
-and permissions. The admin app can inject `Authorization: Bearer ...` on the
-server side and request the web page with:
+Python CLI:
 
-```text
-X-MemoryHub-Trusted-Proxy: 1
+```bash
+uv run memoryhub ls audit
+uv run memoryhub read 2-projects/example/current.md
+uv run memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
+uv run memoryhub delete 2-projects/example/current.md
 ```
 
-In that mode, browsers do not see the bearer token input, and MemoryHub can bind
-only to `127.0.0.1`.
+Without uv:
 
-## Node Client
+```bash
+python3 -m memoryhub.cli ls audit
+python3 -m memoryhub.cli read 2-projects/example/current.md
+```
+
+Node CLI:
 
 ```bash
 export MEMORYHUB_BASE_URL=http://127.0.0.1:8765
 export MEMORYHUB_API_TOKEN=replace-me
 
-node node/memoryhub-node.mjs ls project
+node node/memoryhub-node.mjs ls audit
 node node/memoryhub-node.mjs read 2-projects/example/current.md
 node node/memoryhub-node.mjs write 2-projects/example/current.md "# Current\n\nRemember this."
 node node/memoryhub-node.mjs delete 2-projects/example/current.md
 ```
 
+Recommended agent flow:
+
+1. Run `ls` before work to find relevant rules, projects, and tools.
+2. Run `read` when full context is needed.
+3. Run `write` for durable rules, project context, and debugging records.
+4. Run `delete` to archive short-lived memory that is no longer useful.
+
 ## AstrBot
 
-Copy `integrations/astrbot/agent_memory_hub` into AstrBot's plugin directory and
-create a runtime config from `integrations/astrbot/config.example.json`.
-
-The template exposes:
+Copy this plugin folder into AstrBot's plugin directory:
 
 ```text
-/mem_ls
-/mem_read
-/mem_write
-/mem_delete
+integrations/astrbot/agent_memory_hub
 ```
 
-and matching LLM tools:
+Create runtime config from:
+
+```text
+integrations/astrbot/config.example.json
+```
+
+Manual chat commands:
+
+```text
+/mem_ls keyword
+/mem_read 2-projects/example/current.md
+/mem_write 2-projects/example/current.md | # Current
+
+Markdown content to write
+/mem_delete 2-projects/example/current.md
+```
+
+LLM tool names exposed by the plugin:
 
 ```text
 agent_memory_ls
@@ -182,16 +197,28 @@ agent_memory_write
 agent_memory_delete
 ```
 
-## Reuse From Another Project
+Humans can send `/mem_*` commands in chat. If tool calling works, the AstrBot LLM can call `agent_memory_*` tools directly.
 
-The cleanest boundary is the HTTP API: run MemoryHub as a small side service and
-let any app or agent call the four endpoints.
+## AGENTS/Skill Notes
 
-If you want to vendor the source into another repository, use a submodule:
+`AGENTS.md` is the general entrypoint for agents. Agents only need to know:
+
+- Read `0-memoryhub-rules/` first.
+- Put work rules in `1-work-rules/`.
+- Put project context in `2-projects/<project>/`.
+- Put skill, MCP, CLI, and plugin notes in `3-tools/`.
+- Use only `ls/read/write/delete` to operate memory.
+
+For a dedicated agent skill, summarize this as: search MemoryHub first, read relevant files, write useful candidate memory, and archive obsolete task memory.
+
+## Using It From Other Projects
+
+The simplest boundary is HTTP: run MemoryHub as a small side service, then let other projects and agents call the API.
+
+If you want to pin the source inside another repository, use a git submodule:
 
 ```bash
-git submodule add https://github.com/<owner>/mardio-memory-hub.git vendor/mardio-memory-hub
+git submodule add https://github.com/MARDIO1/mardio-memory-hub.git vendor/mardio-memory-hub
 ```
 
-Use subtree only when you want a single checkout and do not mind a heavier
-upstream-sync workflow.
+The parent project records the MemoryHub commit it uses, while MemoryHub remains independently updatable.

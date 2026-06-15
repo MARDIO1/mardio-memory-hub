@@ -5,9 +5,17 @@
 
 自用感觉挺好用。
 
-我做这个东西，是因为 Agent 需要一个公共记忆，但这个记忆不能只躲在数据库里。只放数据库，管理员不好看、Agent 不好改、迁移也麻烦；只放一堆 Markdown，又很难统一搜索和去重。
+这是一个轻量的跨设备、跨 Agent 记忆与上下文中转站。它主要解决两类问题：
 
-MemoryHub 的思路很简单：**Markdown 文件是正文，SQLite 只是索引。** 人可以像管理普通文件一样看和改，Agent 可以用固定的四个动作读写。
+1. 不同设备、不同 Agent、不同用户的 AI 需要协作，但又不能完全放开权限时，用它做一个很轻的 Agent to Agent 通讯层，传递上下文、审计线索、网络问题排查记录、候选记忆和工作状态。
+2. 在新设备上部署 AI 工作环境时，用它当个人 skill hub、rule hub、project context hub。Agent 先读规则和项目上下文，再开始干活。
+
+仓库里只放两类东西：
+
+1. **MemoryHub 服务端**：Python HTTP API、SQLite 索引、Markdown 文件存储、内置 Web 前端。
+2. **Agent 调用端**：Python CLI、Node CLI、AstrBot 插件模板、AGENTS/skill 风格的使用描述。
+
+MemoryHub 的核心约定很小：
 
 ```bash
 memoryhub ls [keyword]
@@ -16,120 +24,100 @@ memoryhub write <path> <content>
 memoryhub delete <path>
 ```
 
+正文是 Markdown 或 jsonl 文件，SQLite 只做索引。人可以像管理文件夹一样看和改，Agent 可以用固定的四个动作读写。
+
 ---
 
-## 它是什么
-
-`mardio-memory-hub` 是一个给 AI Agent 共用的轻量记忆仓库。
-
-它适合存这些东西：
-
-- Agent 开工前应该读取的规则；
-- 项目的长期背景和当前上下文；
-- 某个任务正在用的临时记忆；
-- 常用 skill、MCP、CLI、工具接入说明。
-
-它现在包含：
-
-- Python CLI；
-- 同样四个动作的 HTTP API；
-- 一个内置 Web 前端；
-- Node HTTP 客户端；
-- AstrBot 插件模板；
-- 一套 Markdown 目录约定。
-
-## 目录约定
+## 目录结构
 
 ```text
-0-memoryhub-rules/     MemoryHub 自己的使用规则
+0-memoryhub-rules/     MemoryHub 自己的规则和总说明
 1-work-rules/          通用工作规则
-2-projects/            项目记忆，按项目建子目录
-3-tools/               skills、MCP、CLI、插件和工具说明
+2-projects/            项目记忆，按项目继续建子目录
+3-tools/               skill、MCP、CLI、插件、工具接入说明
+memoryhub/             服务端和 Python CLI
+node/                  Node CLI
+integrations/astrbot/  AstrBot 插件模板
+docs/                  API 和接入说明
 ```
 
-目录名开头带数字，是为了让 Agent 和人都能稳定地按顺序扫一遍。
-
-## 记忆状态
-
-状态写在 Markdown frontmatter 里：
+文件状态写在 Markdown frontmatter 里：
 
 ```md
 ---
 status: using
-tags: [example]
+tags: [network, audit]
 ---
 
-# 当前任务
+# 当前上下文
 ```
 
-支持三种状态：
+状态只分三种：
 
 ```text
-active    长期有效
+active    长期生效
 using     正在使用，通常是当前任务或短期上下文
-archived  已归档，默认 ls 不显示
+archived  已归档，默认搜索不显示
 ```
 
-`memoryhub delete` 不是物理删除，而是把文件标记成 `archived`。这样误删以后还能找回来，也不会继续污染默认搜索结果。
+`delete` 是软删除：把文件标成 `archived`，不是直接物理删除。
 
-## 安装和运行
+## 服务端使用
 
-用 uv：
+安装依赖后启动服务：
 
 ```bash
-uv run memoryhub ls
+uv run python -m memoryhub.server
 ```
 
-不用 uv：
-
-```bash
-python3 -m memoryhub.cli ls
-```
-
-`MEMORYHUB_DATA_DIR` 用来指定实际存放记忆文件和 SQLite 索引的位置。
-
-## CLI 用法
-
-```bash
-memoryhub ls project
-memoryhub read 2-projects/example/current.md
-memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
-memoryhub delete 2-projects/example/current.md
-```
-
-四个动作故意保持很少。分类、生命周期、标签这些信息都写在 Markdown 里，Agent 可以用自然语言约定来管理，不需要再记一堆子命令。
-
-## HTTP API
-
-启动服务：
+不用 uv 也可以：
 
 ```bash
 python3 -m memoryhub.server
 ```
 
-接口也是同样四个动作：
+常用环境变量：
+
+```env
+MEMORYHUB_DATA_DIR=/path/to/memoryhub-data
+MEMORYHUB_DB_PATH=/path/to/memoryhub.sqlite
+MEMORYHUB_API_HOST=127.0.0.1
+MEMORYHUB_API_PORT=8765
+MEMORYHUB_API_TOKEN=replace-me
+```
+
+API：
 
 ```text
 GET    /api/ls?q=keyword
 GET    /api/read?path=...
 POST   /api/write
 DELETE /api/delete
+GET    /health
 ```
 
-如果设置了 `MEMORYHUB_API_TOKEN`，HTTP 请求需要带 bearer token。
+如果设置了 `MEMORYHUB_API_TOKEN`，HTTP 请求必须带：
 
-## Web 前端
+```text
+Authorization: Bearer <token>
+```
 
-同一个服务也会提供一个 Web 页面：
+Web 前端和 API 是同一个服务：
 
 ```text
 GET /
 GET /app
 ```
 
-这个页面可以搜索、读取、写入和归档记忆。若服务端设置了 `MEMORYHUB_API_TOKEN`，页面会显示 token 输入框；token 只保存在当前浏览器的 localStorage。
+如果要挂到已有后台后面，推荐让原后台负责登录和管理员判断，然后由后台服务端代理 MemoryHub。代理请求 MemoryHub 页面时加：
 
-可以用环境变量把它和已有应用连起来：
+```text
+X-MemoryHub-Trusted-Proxy: 1
+```
+
+这样浏览器里不会出现 bearer token 输入框，MemoryHub 可以只监听 `127.0.0.1`。
+
+可选的顶部跳转按钮：
 
 ```env
 MEMORYHUB_MY_APP_2_URL=http://127.0.0.1:3000/admin/agent-memory
@@ -138,42 +126,69 @@ MEMORYHUB_CLOUD_DISK_URL=http://127.0.0.1:3000/disk
 MEMORYHUB_CLOUD_DISK_LABEL=Open cloud disk
 ```
 
-这些值只决定页面顶部的跳转按钮，不影响记忆数据。
+## Agent 端使用
 
-如果把 MemoryHub 挂在已有后台系统后面，推荐让后台系统负责登录态和权限判断，再由后台代理请求 MemoryHub API。代理可以在服务端注入 `Authorization: Bearer ...`，并在请求 Web 页面时加：
+Python CLI：
 
-```text
-X-MemoryHub-Trusted-Proxy: 1
+```bash
+uv run memoryhub ls audit
+uv run memoryhub read 2-projects/example/current.md
+uv run memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
+uv run memoryhub delete 2-projects/example/current.md
 ```
 
-这样浏览器里不会出现 bearer token 输入框，MemoryHub 也可以只监听 `127.0.0.1`。
+不用 uv：
 
-## Node 客户端
+```bash
+python3 -m memoryhub.cli ls audit
+python3 -m memoryhub.cli read 2-projects/example/current.md
+```
+
+Node CLI：
 
 ```bash
 export MEMORYHUB_BASE_URL=http://127.0.0.1:8765
 export MEMORYHUB_API_TOKEN=replace-me
 
-node node/memoryhub-node.mjs ls project
+node node/memoryhub-node.mjs ls audit
 node node/memoryhub-node.mjs read 2-projects/example/current.md
 node node/memoryhub-node.mjs write 2-projects/example/current.md "# Current\n\nRemember this."
 node node/memoryhub-node.mjs delete 2-projects/example/current.md
 ```
 
-## AstrBot
+Agent 的推荐工作流：
 
-把 `integrations/astrbot/agent_memory_hub` 放到 AstrBot 插件目录，再按 `integrations/astrbot/config.example.json` 写运行配置。
+1. 开始任务前 `ls` 搜索相关项目、规则、工具。
+2. 需要完整上下文时 `read` 读取具体文件。
+3. 产出新的长期规则、项目上下文、排查记录时 `write`。
+4. 短期记忆不用了就 `delete` 归档。
 
-插件提供聊天命令：
+## AstrBot 使用
+
+把插件目录复制到 AstrBot 插件目录：
 
 ```text
-/mem_ls
-/mem_read
-/mem_write
-/mem_delete
+integrations/astrbot/agent_memory_hub
 ```
 
-也提供给 LLM 调用的工具：
+再按示例创建运行配置：
+
+```text
+integrations/astrbot/config.example.json
+```
+
+聊天里可以手动调用：
+
+```text
+/mem_ls keyword
+/mem_read 2-projects/example/current.md
+/mem_write 2-projects/example/current.md | # Current
+
+这里是要写入的 Markdown 内容
+/mem_delete 2-projects/example/current.md
+```
+
+插件同时暴露给 LLM 的工具名：
 
 ```text
 agent_memory_ls
@@ -182,16 +197,28 @@ agent_memory_write
 agent_memory_delete
 ```
 
-## 在其他项目里使用
+也就是说，人在聊天里可以直接发 `/mem_*` 命令；如果模型工具调用正常，AstrBot 里的 AI 也可以自己调用 `agent_memory_*` 工具读写公共记忆。
 
-最稳的方式是把 MemoryHub 当成一个小服务运行，其他项目或 Agent 通过 HTTP API 调它。
+## AGENTS/Skill 描述
 
-如果想把源码固定到某个项目里，推荐用 submodule：
+本仓库的 `AGENTS.md` 是给通用 Agent 看的总入口。Agent 不需要理解一整套复杂数据库，只需要知道：
+
+- 先读 `0-memoryhub-rules/`。
+- 工作规则放 `1-work-rules/`。
+- 项目上下文放 `2-projects/<project>/`。
+- 工具、skill、MCP、插件说明放 `3-tools/`。
+- 读写都走 `ls/read/write/delete`。
+
+如果要给某个 Agent 写专用 skill，就把这套规则浓缩成：“先搜索 MemoryHub，再读取相关文件，必要时写回候选记忆或归档过期记忆。”
+
+## 和其他项目一起用
+
+最简单的方式是把 MemoryHub 当一个小服务运行，其他项目或 Agent 通过 HTTP API 调它。
+
+如果想把源码固定到另一个仓库里，推荐用 git submodule：
 
 ```bash
-git submodule add https://github.com/<owner>/mardio-memory-hub.git vendor/mardio-memory-hub
+git submodule add https://github.com/MARDIO1/mardio-memory-hub.git vendor/mardio-memory-hub
 ```
 
-这样主项目只记录正在使用的 MemoryHub commit；MemoryHub 自己仍然保持独立更新。
-
-如果你不想处理 submodule，也可以用 subtree，但后续和上游同步会更笨重。
+主项目记录当前使用的 MemoryHub commit，MemoryHub 自己保持独立更新。
