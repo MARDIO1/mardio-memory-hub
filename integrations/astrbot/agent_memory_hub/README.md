@@ -13,3 +13,6 @@ want filtering.
 /mem_write path | markdown
 /mem_delete path
 ```
+
+`/mem_delete` permanently deletes the file and its SQLite index row. Use it for
+short-lived memory that should not keep appearing in future index/search flows.

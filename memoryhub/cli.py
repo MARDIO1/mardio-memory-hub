@@ -38,8 +38,9 @@ def build_parser() -> argparse.ArgumentParser:
     write_cmd.add_argument("content", nargs="?")
     write_cmd.add_argument("--json", action="store_true")
 
-    delete_cmd = sub.add_parser("delete", help="Archive one memory file")
+    delete_cmd = sub.add_parser("delete", help="Archive or delete one memory file")
     delete_cmd.add_argument("path")
+    delete_cmd.add_argument("--hard", action="store_true", help="Physically delete the file and SQLite index")
     delete_cmd.add_argument("--json", action="store_true")
 
     return parser
@@ -72,11 +73,12 @@ def main(argv: list[str] | None = None) -> None:
         else:
             print(f"wrote {result['path']} [{result['status']}]")
     elif args.command == "delete":
-        result = delete_document(paths, args.path)
+        result = delete_document(paths, args.path, hard=args.hard)
         if args.json:
             print_json(result)
         else:
-            print(f"archived {result['path']}")
+            action = "deleted" if args.hard else "archived"
+            print(f"{action} {result['path']}")
 
 
 if __name__ == "__main__":

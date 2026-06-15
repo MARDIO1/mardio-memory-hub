@@ -16,6 +16,7 @@ DEFAULT_DIRS = [
     "0-memoryhub-rules",
     "1-work-rules",
     "2-projects",
+    "inbox",
     "3-tools/skills",
     "3-tools/mcp",
     "3-tools/cli",
@@ -74,6 +75,10 @@ def infer_category(rel_path: str) -> str:
         return "projects"
     if first.startswith("3-"):
         return "tools"
+    if first == "inbox":
+        return "inbox"
+    if first in {"personas", "context-packs", "memories"}:
+        return "projects"
     return "misc"
 
 

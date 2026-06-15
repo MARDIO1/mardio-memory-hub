@@ -534,6 +534,7 @@ INDEX_HTML = """<!doctype html>
               <button id="newBtn" class="button" type="button">新建 .md</button>
               <button id="readBtn" class="button" type="button">读取</button>
               <button id="deleteBtn" class="button danger" type="button">归档</button>
+              <button id="hardDeleteBtn" class="button danger" type="button">删除</button>
               <button id="writeBtn" class="button primary" type="button">保存修改</button>
             </div>
           </div>
@@ -573,6 +574,7 @@ INDEX_HTML = """<!doctype html>
       ['rules', 'MemoryHub 规则', '0'],
       ['work-rules', '工作规则', '1'],
       ['projects', '项目记忆', '2'],
+      ['inbox', '收件箱', 'I'],
       ['tools', '工具与 skill', '3'],
       ['misc', '其他', '*'],
     ];
@@ -593,6 +595,7 @@ INDEX_HTML = """<!doctype html>
       readBtn: document.getElementById('readBtn'),
       writeBtn: document.getElementById('writeBtn'),
       deleteBtn: document.getElementById('deleteBtn'),
+      hardDeleteBtn: document.getElementById('hardDeleteBtn'),
       previewTab: document.getElementById('previewTab'),
       editTab: document.getElementById('editTab'),
     };
@@ -788,6 +791,12 @@ INDEX_HTML = """<!doctype html>
       const q = encodeURIComponent(els.queryInput.value.trim());
       const payload = await request(`${basePath}/api/ls?q=${q}`, { headers: { 'Content-Type': 'application/json' } });
       state.docs = payload.results || [];
+      if (state.current && !state.docs.some((item) => item.path === state.current.path)) {
+        state.current = null;
+        els.pathInput.value = '';
+        els.contentInput.value = '';
+        refreshPreview();
+      }
       renderResults();
       setStatus(`共 ${filteredDocs().length} 条`);
     }
@@ -833,6 +842,23 @@ INDEX_HTML = """<!doctype html>
       setStatus(`已归档 ${path}`);
     }
 
+    async function hardDeleteCurrent() {
+      const path = els.pathInput.value.trim();
+      if (!path) return setStatus('先选择文件');
+      if (!confirm(`永久删除 ${path}？这个操作会删除文件和 SQLite 索引。`)) return;
+      setStatus('正在删除...');
+      await request(`${basePath}/api/delete`, {
+        method: 'DELETE',
+        body: JSON.stringify({ path, hard: true }),
+      });
+      state.current = null;
+      els.pathInput.value = '';
+      els.contentInput.value = '';
+      refreshPreview();
+      await search();
+      setStatus(`已删除 ${path}`);
+    }
+
     function newDoc() {
       const stamp = new Date().toISOString().slice(0, 10);
       els.pathInput.value = `2-projects/manual-${stamp}.md`;
@@ -869,6 +895,7 @@ INDEX_HTML = """<!doctype html>
     els.readBtn.addEventListener('click', () => readCurrent().catch((error) => setStatus(error.message)));
     els.writeBtn.addEventListener('click', () => writeCurrent().catch((error) => setStatus(error.message)));
     els.deleteBtn.addEventListener('click', () => archiveCurrent().catch((error) => setStatus(error.message)));
+    els.hardDeleteBtn.addEventListener('click', () => hardDeleteCurrent().catch((error) => setStatus(error.message)));
     search().catch((error) => setStatus(error.message));
   </script>
 </body>

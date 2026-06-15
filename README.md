@@ -21,7 +21,7 @@ MemoryHub 的核心约定很小：
 memoryhub ls [keyword]          # 不带关键词时只列 SQLite 索引
 memoryhub read <path>
 memoryhub write <path> <content>
-memoryhub delete <path>
+memoryhub delete <path>         # 默认归档；加 --hard 物理删除
 ```
 
 正文是 Markdown 或 jsonl 文件，SQLite 负责列索引和过滤。人可以像管理文件夹一样看和改，Agent 先用 `ls` 看索引，再按需 `read` 精读正文，避免一上来吞完整文件。
@@ -60,7 +60,7 @@ using     正在使用，通常是当前任务或短期上下文
 archived  已归档，默认搜索不显示
 ```
 
-`delete` 是软删除：把文件标成 `archived`，不是直接物理删除。
+CLI 里的 `delete` 默认是软删除：把文件标成 `archived`。如果要清理没有价值的瞬时记忆，用 `memoryhub delete <path> --hard`，它会同时删除正文文件和 SQLite 索引。
 
 ## 服务端使用
 
@@ -136,6 +136,7 @@ uv run memoryhub ls audit
 uv run memoryhub read 2-projects/example/current.md
 uv run memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
 uv run memoryhub delete 2-projects/example/current.md
+uv run memoryhub delete 2-projects/example/current.md --hard
 ```
 
 不用 uv：
@@ -165,7 +166,7 @@ Agent 的推荐工作流：
 2. 如果索引太多，再用 `ls 关键词` 过滤。
 3. 需要完整上下文时 `read` 读取具体文件。
 3. 产出新的长期规则、项目上下文、排查记录时 `write`。
-4. 短期记忆不用了就 `delete` 归档。
+4. 短期记忆不用了就 `delete --hard` 清理；只是暂时不想展示时再归档。
 
 ## AstrBot 使用
 
@@ -193,6 +194,8 @@ integrations/astrbot/config.example.json
 /mem_delete 2-projects/example/current.md
 ```
 
+AstrBot 的 `/mem_delete` 和 `agent_memory_delete` 是物理删除，适合清理没有长期价值的瞬时记忆。
+
 插件同时暴露给 LLM 的工具名：
 
 ```text
@@ -214,7 +217,7 @@ agent_memory_delete
 - 工具、skill、MCP、插件说明放 `3-tools/`。
 - 读写都走 `ls/read/write/delete`。
 
-如果要给某个 Agent 写专用 skill，就把这套规则浓缩成：“先搜索 MemoryHub，再读取相关文件，必要时写回候选记忆或归档过期记忆。”
+如果要给某个 Agent 写专用 skill，就把这套规则浓缩成：“先搜索 MemoryHub，再读取相关文件，必要时写回候选记忆；没有价值的瞬时记忆要删除，不要长期污染索引。”
 
 ## 和其他项目一起用
 

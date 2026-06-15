@@ -21,7 +21,7 @@ The core surface is intentionally small:
 memoryhub ls [keyword]          # without keywords, list SQLite index only
 memoryhub read <path>
 memoryhub write <path> <content>
-memoryhub delete <path>
+memoryhub delete <path>         # archive by default; add --hard to remove
 ```
 
 Markdown or jsonl files are the source of truth. SQLite powers index listing and filtering. Agents should run `ls` first, then `read` only the documents that matter.
@@ -60,7 +60,7 @@ using     currently used memory, usually task context
 archived  archived and hidden from default search
 ```
 
-`delete` is a soft delete. It marks the file as `archived` instead of removing it from disk.
+CLI `delete` is a soft delete by default. It marks the file as `archived`. Use `memoryhub delete <path> --hard` for low-value short-lived memory; this removes both the body file and the SQLite index row.
 
 ## Server
 
@@ -136,6 +136,7 @@ uv run memoryhub ls audit
 uv run memoryhub read 2-projects/example/current.md
 uv run memoryhub write 2-projects/example/current.md "# Current\n\nRemember this."
 uv run memoryhub delete 2-projects/example/current.md
+uv run memoryhub delete 2-projects/example/current.md --hard
 ```
 
 Without uv:
@@ -165,7 +166,7 @@ Recommended agent flow:
 2. Run `ls keyword` if the index is too large.
 3. Run `read` only when full context is needed.
 3. Run `write` for durable rules, project context, and debugging records.
-4. Run `delete` to archive short-lived memory that is no longer useful.
+4. Run `delete --hard` for short-lived memory that is no longer useful; archive only when you want to keep it for later review.
 
 ## AstrBot
 
@@ -192,6 +193,8 @@ Manual chat commands:
 Markdown content to write
 /mem_delete 2-projects/example/current.md
 ```
+
+AstrBot `/mem_delete` and `agent_memory_delete` permanently delete the file and index row. Use them for low-value transient memory.
 
 LLM tool names exposed by the plugin:
 

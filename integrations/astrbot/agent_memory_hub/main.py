@@ -68,8 +68,8 @@ class Main(star.Star):
         if not path:
             self._reply(event, "Usage: /mem_delete <path>")
             return
-        data = await self._request("DELETE", "/api/delete", {"path": path})
-        self._reply(event, f"Archived: {data.get('result', {}).get('path')}")
+        data = await self._request("DELETE", "/api/delete", {"path": path, "hard": True})
+        self._reply(event, f"Deleted: {data.get('result', {}).get('path')}")
 
     @llm_tool(name="agent_memory_ls")
     async def agent_memory_ls(self, event: AstrMessageEvent, query: str = "") -> str:
@@ -101,9 +101,9 @@ class Main(star.Star):
 
     @llm_tool(name="agent_memory_delete")
     async def agent_memory_delete(self, event: AstrMessageEvent, path: str) -> str:
-        """Archive one MemoryHub file.
+        """Permanently delete one MemoryHub file.
 
         Args:
             path(string): MemoryHub file path.
         """
-        return json.dumps(await self._request("DELETE", "/api/delete", {"path": path}), ensure_ascii=False)
+        return json.dumps(await self._request("DELETE", "/api/delete", {"path": path, "hard": True}), ensure_ascii=False)

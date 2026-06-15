@@ -98,7 +98,7 @@ def make_handler(paths: HubPaths, token: str | None):
             try:
                 body = read_json(self)
                 if urlparse(self.path).path in {"/api/delete", "/api/file"}:
-                    json_response(self, 200, {"ok": True, "result": delete_document(paths, body["path"])})
+                    json_response(self, 200, {"ok": True, "result": delete_document(paths, body["path"], hard=body.get("hard") is True)})
                 else:
                     json_response(self, 404, {"error": "not found"})
             except Exception as error:
